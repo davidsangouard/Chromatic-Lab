@@ -18,10 +18,6 @@ Générateur de palettes de couleurs harmonieuses et de patterns CSS minimaliste
 - **Triadiques**: Trois couleurs équidistantes
 - **Tétradiques**: Quatre couleurs en rectangle
 
-## Technologies
-
-HTML5, CSS3, JavaScript vanilla
-
 ## Auteur
 
 David Sangouard  
