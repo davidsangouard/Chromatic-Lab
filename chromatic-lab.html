@@ -1,0 +1,768 @@
+<!--
+    ═════════════════════════════════════════════════════════
+    
+         ██████╗ ███████╗
+         ██╔══██╗██╔════╝
+         ██║  ██║███████╗    David Sangouard
+         ██║  ██║╚════██║    
+         ██████╔╝███████║    github.com/davidsangouard
+         ╚═════╝ ╚══════╝    
+    
+         » Architect of digital solutions
+         » Building the web, one pixel at a time
+    
+    ═════════════════════════════════════════════════════════
+-->
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chromatic Lab — Palette & Pattern Generator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap');
+
+        :root {
+            --plum-wine: #5E4075;
+            --linen-cloud: #F8F9ED;
+            --deep-plum: #3d2851;
+            --soft-plum: #7a5a92;
+            --warm-linen: #f0f1e6;
+            --shadow: rgba(94, 64, 117, 0.08);
+            --shadow-strong: rgba(94, 64, 117, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--deep-plum);
+            color: var(--linen-cloud);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            z-index: 1;
+        }
+
+        header {
+            position: relative;
+            z-index: 10;
+            padding: 2.5rem 2rem 1.5rem;
+            border-bottom: 1px solid rgba(248, 249, 237, 0.1);
+            background: rgba(61, 40, 81, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 300;
+            letter-spacing: 0.02em;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            opacity: 0.7;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.1s forwards;
+        }
+
+        main {
+            position: relative;
+            z-index: 10;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 3rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.2s forwards;
+        }
+
+        .tab {
+            font-family: 'Cormorant Garamond', serif;
+            background: transparent;
+            border: 1px solid rgba(248, 249, 237, 0.15);
+            color: var(--linen-cloud);
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.02em;
+        }
+
+        .tab:hover {
+            border-color: var(--linen-cloud);
+            background: rgba(248, 249, 237, 0.05);
+        }
+
+        .tab.active {
+            background: var(--linen-cloud);
+            color: var(--deep-plum);
+            border-color: var(--linen-cloud);
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            background: rgba(248, 249, 237, 0.1);
+            border: 1px solid rgba(248, 249, 237, 0.2);
+            color: var(--linen-cloud);
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn:hover {
+            background: rgba(248, 249, 237, 0.15);
+            border-color: var(--linen-cloud);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: var(--linen-cloud);
+            color: var(--deep-plum);
+            border-color: var(--linen-cloud);
+        }
+
+        .btn-primary:hover {
+            background: var(--warm-linen);
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .color-card {
+            background: rgba(248, 249, 237, 0.03);
+            border: 1px solid rgba(248, 249, 237, 0.1);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .color-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: var(--color);
+            transition: all 0.3s ease;
+        }
+
+        .color-card:hover {
+            border-color: rgba(248, 249, 237, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .color-info {
+            margin-top: 130px;
+            position: relative;
+        }
+
+        .color-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .color-values {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            font-family: 'Courier New', monospace;
+            opacity: 0.7;
+        }
+
+        .color-value {
+            cursor: pointer;
+            transition: opacity 0.2s;
+            padding: 0.25rem 0;
+        }
+
+        .color-value:hover {
+            opacity: 1;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .pattern-card {
+            background: rgba(248, 249, 237, 0.03);
+            border: 1px solid rgba(248, 249, 237, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .pattern-card:hover {
+            border-color: rgba(248, 249, 237, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .pattern-preview {
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pattern-info {
+            padding: 1.5rem;
+        }
+
+        .pattern-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            letter-spacing: 0.02em;
+        }
+
+        .pattern-code {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            line-height: 1.5;
+            color: rgba(248, 249, 237, 0.8);
+            border: 1px solid rgba(248, 249, 237, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .pattern-code:hover {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--linen-cloud);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 50px;
+            border: 1px solid rgba(248, 249, 237, 0.2);
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        input[type="color"]:hover {
+            border-color: var(--linen-cloud);
+        }
+
+        select {
+            background: rgba(248, 249, 237, 0.1);
+            border: 1px solid rgba(248, 249, 237, 0.2);
+            color: var(--linen-cloud);
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: var(--linen-cloud);
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--linen-cloud);
+            color: var(--deep-plum);
+            padding: 1rem 1.5rem;
+            border-radius: 0;
+            font-size: 0.875rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+            border: 1px solid var(--deep-plum);
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            font-size: 0.75rem;
+            opacity: 0.5;
+            letter-spacing: 0.1em;
+            font-weight: 300;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 2rem 1.5rem 1rem;
+            }
+
+            main {
+                padding: 2rem 1.5rem;
+            }
+
+            .palette-grid,
+            .pattern-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(248, 249, 237, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(248, 249, 237, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(248, 249, 237, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="grain"></div>
+    
+    <header>
+        <h1>Chromatic Lab</h1>
+        <p class="subtitle">Palette & Pattern Generator</p>
+    </header>
+
+    <main>
+        <div class="tabs">
+            <button class="tab active" data-tab="palettes">Palettes de couleurs</button>
+            <button class="tab" data-tab="patterns">Patterns CSS</button>
+        </div>
+
+        <section id="palettes" class="section active">
+            <div class="controls">
+                <button class="btn btn-primary" onclick="generatePalette()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 0.5rem;">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
+                    Générer
+                </button>
+                <div class="input-group">
+                    <input type="color" id="baseColor" value="#5E4075" onchange="generateFromBase()">
+                    <select id="harmonyType" onchange="generateFromBase()">
+                        <option value="analogous">Analogues</option>
+                        <option value="complementary">Complémentaires</option>
+                        <option value="triadic">Triadiques</option>
+                        <option value="tetradic">Tétradiques</option>
+                        <option value="monochromatic">Monochromatiques</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="exportPalette()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 0.5rem;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    Exporter CSS
+                </button>
+            </div>
+            <div id="paletteContainer" class="palette-grid"></div>
+        </section>
+
+        <section id="patterns" class="section">
+            <div class="controls">
+                <button class="btn btn-primary" onclick="generatePatterns()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 0.5rem;">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
+                    Générer patterns
+                </button>
+                <input type="color" id="patternColor" value="#5E4075" onchange="generatePatterns()">
+            </div>
+            <div id="patternContainer" class="pattern-grid"></div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        Chromatic Lab — Crafted with precision
+    </footer>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        let currentPalette = [];
+
+        // Gestion des onglets
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Conversion de couleurs
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return { h: h * 360, s: s * 100, l: l * 100 };
+        }
+
+        function hslToRgb(h, s, l) {
+            h /= 360;
+            s /= 100;
+            l /= 100;
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return {
+                r: Math.round(r * 255),
+                g: Math.round(g * 255),
+                b: Math.round(b * 255)
+            };
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            }).join('');
+        }
+
+        // Génération de noms de couleurs
+        const colorNames = [
+            'Obsidian', 'Midnight', 'Slate', 'Charcoal', 'Graphite',
+            'Plum', 'Burgundy', 'Wine', 'Crimson', 'Scarlet',
+            'Amber', 'Honey', 'Sand', 'Wheat', 'Linen',
+            'Sage', 'Moss', 'Fern', 'Pine', 'Jade',
+            'Azure', 'Cobalt', 'Navy', 'Ocean', 'Sky',
+            'Lavender', 'Violet', 'Mauve', 'Orchid', 'Lilac',
+            'Pearl', 'Ivory', 'Cream', 'Cloud', 'Mist'
+        ];
+
+        function generateColorName() {
+            return colorNames[Math.floor(Math.random() * colorNames.length)] + ' ' + 
+                   ['Haze', 'Dust', 'Shadow', 'Light', 'Tone', 'Shade', 'Tint'][Math.floor(Math.random() * 7)];
+        }
+
+        // Génération de palettes harmonieuses
+        function generatePalette() {
+            const type = document.getElementById('harmonyType').value;
+            const baseHex = document.getElementById('baseColor').value;
+            generateFromBase(baseHex, type);
+        }
+
+        function generateFromBase(baseHex = null, type = null) {
+            if (!baseHex) baseHex = document.getElementById('baseColor').value;
+            if (!type) type = document.getElementById('harmonyType').value;
+            
+            const rgb = hexToRgb(baseHex);
+            const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+            
+            currentPalette = [];
+            const colors = [];
+
+            switch(type) {
+                case 'analogous':
+                    colors.push(hsl);
+                    colors.push({h: (hsl.h + 30) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: (hsl.h - 30 + 360) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: hsl.h, s: hsl.s * 0.7, l: Math.min(hsl.l * 1.3, 90)});
+                    colors.push({h: hsl.h, s: hsl.s * 1.2, l: Math.max(hsl.l * 0.7, 10)});
+                    break;
+                
+                case 'complementary':
+                    colors.push(hsl);
+                    colors.push({h: (hsl.h + 180) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: hsl.h, s: hsl.s * 0.6, l: Math.min(hsl.l * 1.4, 95)});
+                    colors.push({h: (hsl.h + 180) % 360, s: hsl.s * 0.6, l: Math.min(hsl.l * 1.4, 95)});
+                    colors.push({h: hsl.h, s: hsl.s * 1.2, l: Math.max(hsl.l * 0.6, 10)});
+                    break;
+                
+                case 'triadic':
+                    colors.push(hsl);
+                    colors.push({h: (hsl.h + 120) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: (hsl.h + 240) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: hsl.h, s: hsl.s * 0.5, l: Math.min(hsl.l * 1.5, 95)});
+                    colors.push({h: (hsl.h + 120) % 360, s: hsl.s * 0.8, l: Math.max(hsl.l * 0.7, 15)});
+                    break;
+                
+                case 'tetradic':
+                    colors.push(hsl);
+                    colors.push({h: (hsl.h + 90) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: (hsl.h + 180) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: (hsl.h + 270) % 360, s: hsl.s, l: hsl.l});
+                    colors.push({h: hsl.h, s: hsl.s * 0.4, l: Math.min(hsl.l * 1.6, 97)});
+                    break;
+                
+                case 'monochromatic':
+                    for (let i = 0; i < 5; i++) {
+                        colors.push({
+                            h: hsl.h,
+                            s: Math.max(20, hsl.s * (0.6 + i * 0.2)),
+                            l: 20 + i * 17
+                        });
+                    }
+                    break;
+            }
+
+            const container = document.getElementById('paletteContainer');
+            container.innerHTML = '';
+
+            colors.forEach((color, index) => {
+                const rgb = hslToRgb(color.h, color.s, color.l);
+                const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                
+                currentPalette.push(hex);
+
+                const card = document.createElement('div');
+                card.className = 'color-card';
+                card.style.setProperty('--color', hex);
+                
+                card.innerHTML = `
+                    <div class="color-info">
+                        <div class="color-name">${generateColorName()}</div>
+                        <div class="color-values">
+                            <div class="color-value" onclick="copyToClipboard('${hex}', this)">
+                                HEX: ${hex}
+                            </div>
+                            <div class="color-value" onclick="copyToClipboard('rgb(${rgb.r}, ${rgb.g}, ${rgb.b})', this)">
+                                RGB: ${rgb.r}, ${rgb.g}, ${rgb.b}
+                            </div>
+                            <div class="color-value" onclick="copyToClipboard('hsl(${Math.round(color.h)}, ${Math.round(color.s)}%, ${Math.round(color.l)}%)', this)">
+                                HSL: ${Math.round(color.h)}, ${Math.round(color.s)}%, ${Math.round(color.l)}%
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        // Export CSS
+        function exportPalette() {
+            let css = ':root {\n';
+            currentPalette.forEach((color, index) => {
+                css += `  --color-${index + 1}: ${color};\n`;
+            });
+            css += '}';
+            
+            copyToClipboard(css);
+            showNotification('Palette CSS copiée');
+        }
+
+        // Génération de patterns CSS
+        function generatePatterns() {
+            const color = document.getElementById('patternColor').value;
+            const container = document.getElementById('patternContainer');
+            container.innerHTML = '';
+
+            const patterns = [
+                {
+                    name: 'Dots Grid',
+                    css: `background-color: ${color};\nbackground-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);\nbackground-size: 20px 20px;`
+                },
+                {
+                    name: 'Diagonal Lines',
+                    css: `background: repeating-linear-gradient(\n  45deg,\n  ${color},\n  ${color} 10px,\n  transparent 10px,\n  transparent 20px\n);`
+                },
+                {
+                    name: 'Cross Hatch',
+                    css: `background-color: ${color};\nbackground-image: \n  repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(255,255,255,0.05) 20px, rgba(255,255,255,0.05) 21px),\n  repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,255,255,0.05) 20px, rgba(255,255,255,0.05) 21px);`
+                },
+                {
+                    name: 'Zigzag',
+                    css: `background: linear-gradient(135deg, ${color} 25%, transparent 25%) -10px 0,\n  linear-gradient(225deg, ${color} 25%, transparent 25%) -10px 0,\n  linear-gradient(315deg, ${color} 25%, transparent 25%),\n  linear-gradient(45deg, ${color} 25%, transparent 25%);\nbackground-size: 20px 20px;\nbackground-color: rgba(255,255,255,0.1);`
+                },
+                {
+                    name: 'Checkerboard',
+                    css: `background-color: ${color};\nbackground-image: \n  linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%),\n  linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%);\nbackground-size: 30px 30px;\nbackground-position: 0 0, 15px 15px;`
+                },
+                {
+                    name: 'Waves',
+                    css: `background-color: ${color};\nbackground-image: radial-gradient(ellipse at top, rgba(255,255,255,0.1), transparent),\n  radial-gradient(ellipse at bottom, rgba(0,0,0,0.1), transparent);\nbackground-size: 100% 50%;\nbackground-position: 0 0, 0 100%;`
+                }
+            ];
+
+            patterns.forEach(pattern => {
+                const card = document.createElement('div');
+                card.className = 'pattern-card';
+                
+                card.innerHTML = `
+                    <div class="pattern-preview" style="${pattern.css}"></div>
+                    <div class="pattern-info">
+                        <div class="pattern-name">${pattern.name}</div>
+                        <pre class="pattern-code" onclick="copyToClipboard(\`${pattern.css.replace(/`/g, '\\`')}\`, this)">${pattern.css}</pre>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        // Copier dans le presse-papiers
+        function copyToClipboard(text, element) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('Copié dans le presse-papiers');
+            });
+        }
+
+        // Notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+
+        // Initialisation
+        generateFromBase();
+        generatePatterns();
+    </script>
+</body>
+</html>
